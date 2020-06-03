@@ -1,0 +1,88 @@
+* TLDR
+  
+  ctest is a light utility that I use for one of my pet projects.  It
+  allows to create tests using a declarative style.  All tests are run
+  in their own thread.  Tests can be declared in different compilation
+  units without needing to reference them anywhere except in the first
+  declaration.
+
+  An example is given at the of ctest.c.
+
+* Prerequisites
+  
+  - pthread
+  - GCC attributes: section, used, aligned
+
+* Registration of tests
+
+  Tests can be registered to ctest using the *CTEST_TEST_IS(...)*
+  macro.  It accepts a set of *CTEST_TEST_* macros that describe the
+  test.
+
+  For example
+  #+BEGIN_SRC c
+    CTEST_TEST_IS(
+	    CTEST_TEST_NAME("test name")
+	    CTEST_TEST_FUNC(test_func)
+	    /* Argument to void test_func(void *) */
+	    CTEST_TEST_ARG(NULL)
+	    /* Level threshold */
+	    CTEST_TEST_LVL(5)
+	    );
+  #+END_SRC 
+  
+* Running tests  
+
+  Calling *ctest_do(flags, min_lvl, filter_re)* will run all tests in
+  parallel and returns when all of them are done.
+
+  The current only flag for *flags* is *CTEST_DRY_RUN* which will
+  print the list of the tests that would've run, without running them,
+  then exits.
+
+  *min_lvl* is a threshold for tests to run.  Tests that have their
+  level less than this threshold won't run.
+
+  *filter_re* is an extended POSIX regular expression to filter tests
+  based on their name.  Tests with name that match this regular
+  expression will run.  If set to NULL, all tests will match.
+
+* Test's environment
+
+  Every test has access to the variable 'ctest_this_test' which is a
+  pointer to the *struct ctest* that was created during the
+  registration for that test.
+
+  ctest provides usesful macros for tests
+
+  - Memory: ctest_malloc, ctest_realloc, ctest_free
+  - setjmp: ctest_done, ctest_fail, ctest_panic
+  - assert: ctest_assert
+
+  For the setjmp category, this is like a C++
+  exception. 
+
+  *ctest_done(state)* will terminate the test.
+
+  *ctest_fail(...)* will print the formated message to stdout before
+  terminating with the state *CTEST_FAIL*.
+
+  *ctest_panic(...)* same as *ctest_fail* but with state
+  *CTEST_PANIC*.
+
+* Iterating over the results
+
+  Here's how to iterate over the results after running the tests.
+
+  #+BEGIN_SRC c
+    struct ctest *it;
+    CTEST_FOR_EACH_TEST(it) {
+	    printf("%s: %s\n", it->name, ctest_state2str(it->state));
+    }
+  #+END_SRC
+
+
+* Configuration
+
+  You can configure ctest by defining the macros that are described at
+  the begining of ctest.h.
